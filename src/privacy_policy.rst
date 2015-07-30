@@ -67,5 +67,5 @@ contacting us via the contact details given below.
 
 The person responsible for processing – contact details
 =======================================================
-Incubaid BVBA, Antwerpsesteenweg 19, 9080 Lochristi, Belgium, at
-`arakoon@incubaid.com <mailto:arakoon@incubaid.com>`_.
+Open vStorgae, Antwerpsesteenweg 19, 9080 Lochristi, Belgium, at
+`arakoon@openvstorage.com <mailto:arakoon@openvstorage.com>`_.

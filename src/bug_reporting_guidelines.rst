@@ -5,8 +5,7 @@ Please insure to take into consideration at least six of the points mentioned
 below in your bug report. Incomplete bug reports are very hard to understand,
 reproduce and fix.
 
-- If you're a commectial user, Use `<http://jira.incubaid.com>`_ to report the bug.
-  All others can use `<https://github.com/Incubaid/arakoon/issues>`_ .
+- To report a bug please use `<https://github.com/openvstorage/arakoon/issues>`_ .
 
 - Submit a test case, the smaller, the better. You can do this by clicking on
   the "Create a new attachment" link. When attaching a file, please set the
