@@ -2,7 +2,7 @@
 Downloads
 =========
 
-Arakoon downloads are hosted on github: `<https://github.com/Incubaid/arakoon/releases/>`_
+Arakoon downloads are hosted on github: `<https://github.com/openvstorage/arakoon/releases/>`_
 
 If you want support for other distros, please contact us and we'll see what we can do.
 
