@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 
 
@@ -6,13 +5,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
+
   <title>Arakoon :: Arakoon manifesto</title>
 
-    
+
     <link rel="stylesheet" href="_static/basic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    
+
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
@@ -83,7 +82,7 @@
   </header>
 
   <div class="container" id='main'>
-    
+
   <div class="section" id="arakoon-manifesto">
 <h1><a class="toc-backref" href="#id8">Arakoon manifesto</a><a class="headerlink" href="#arakoon-manifesto" title="Permalink to this headline">¶</a></h1>
 <table class="docutils field-list" frame="void" rules="none">
@@ -987,31 +986,31 @@ The population can only change with reasonable increments.</p>
   }
   subgraph cluster1 {
     label = &quot;slave&quot;;
-    
+
     node [color=black] slave_wait_for_accept;
-    node [color=green] slave_steady_state;	
+    node [color=green] slave_steady_state;
     node [color=black] slave_fake_prepare;
     node [color=black] slave_waiting_for_prepare;
     node [color=black] slave_discovered_other_master;
 
-    slave_steady_state -&gt; slave_steady_state 
+    slave_steady_state -&gt; slave_steady_state
                           [color = green, fontcolor=green,label = &quot;(13)&quot;];
     slave_steady_state -&gt; slave_wait_for_accept;
     slave_steady_state -&gt; slave_fake_prepare [label=&quot;(14)&quot;];
-    slave_wait_for_accept -&gt; slave_steady_state 
+    slave_wait_for_accept -&gt; slave_steady_state
                              [color = green, fontcolor = green, label = &quot;(12)&quot;];
     slave_wait_for_accept -&gt; slave_wait_for_accept;
     slave_wait_for_accept -&gt; slave_fake_prepare;
     slave_fake_prepare -&gt; slave_waiting_for_prepare;
-    slave_waiting_for_prepare -&gt; slave_wait_for_accept 
+    slave_waiting_for_prepare -&gt; slave_wait_for_accept
     			      [color = green, label = &quot;(16)&quot;];
     slave_waiting_for_prepare -&gt; slave_waiting_for_prepare;
     slave_waiting_for_prepare -&gt; slave_discovered_other_master;
     slave_waiting_for_prepare -&gt; slave_steady_state;
-    
+
     slave_discovered_other_master -&gt; slave_steady_state;
     slave_discovered_other_master -&gt; slave_wait_for_accept;
-    
+
   }
   subgraph cluster2 {
     label = &quot;elections&quot;;
@@ -1026,7 +1025,7 @@ The population can only change with reasonable increments.</p>
 
   }
 
-  slave_steady_state -&gt; election_suggest;	
+  slave_steady_state -&gt; election_suggest;
   slave_discovered_other_master -&gt; election_suggest;
   promises_check_done -&gt; accepteds_check_done [color=green, label=&quot;(4)&quot;];
   stable_master -&gt; election_suggest;
@@ -1398,7 +1397,7 @@ Possible options are:</p>
     <footer>
       <div class='row'>
         <div class='span-one-third'>
-          <p>&copy; 2012, Incubaid BVBA</p>
+          <p>&copy; 2010-2015, Open vStorage</p>
         </div>
         <div class='span-two-thirds'>
           <p class='pull-right'>

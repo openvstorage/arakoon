@@ -39,6 +39,7 @@ div.highlight .nt { color: #000080 } /* Name.Tag */
 div.highlight .nv { color: #008080 } /* Name.Variable */
 div.highlight .ow { font-weight: bold } /* Operator.Word */
 div.highlight .w { color: #bbbbbb } /* Text.Whitespace */
+div.highlight .mb { color: #009999 } /* Literal.Number.Bin */
 div.highlight .mf { color: #009999 } /* Literal.Number.Float */
 div.highlight .mh { color: #009999 } /* Literal.Number.Hex */
 div.highlight .mi { color: #009999 } /* Literal.Number.Integer */
