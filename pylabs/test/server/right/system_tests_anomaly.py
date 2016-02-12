@@ -447,27 +447,35 @@ def test_block_master_ports () :
 
         return new_master_id
 
-    cli = Common.get_client()
-    cli.nop()
-    old_master_id = cli.whoMaster()
+    
+    def _inner():
+        cli = Common.get_client()
+        cli.nop()
+        old_master_id = cli.whoMaster()
 
-    master_ports = get_node_ports( old_master_id )
-    cluster = Common._getCluster(Common.cluster_id)
-    master_client_port = cluster.getNodeConfig(old_master_id ) ["client_port"]
-    master_ports.remove( master_client_port )
-    block_rules = []
-    for master_port in master_ports:
-        block_rules.extend (build_iptables_block_rules (master_port) )
+        master_ports = get_node_ports( old_master_id )
+        cluster = Common._getCluster(Common.cluster_id)
+        master_client_port = cluster.getNodeConfig(old_master_id ) ["client_port"]
+        master_ports.remove( master_client_port )
+        block_rules = []
+        for master_port in master_ports:
+            block_rules.extend (build_iptables_block_rules (master_port) )
 
-    rules = {"filter": block_rules}
-    apply_iptables_rules(rules )
+        rules = {"filter": block_rules}
+        apply_iptables_rules(rules )
 
-    NT.assert_raises( ArakoonException, cli.set, "key", "value" )
+        NT.assert_raises( ArakoonException, cli.set, "key", "value" )
 
-    new_master_id = validate_reelection( old_master_id )
+        new_master_id = validate_reelection( old_master_id )
 
-    flush_all_rules()
+        flush_all_rules()
 
-    cli._masterId = None
-    Common.set_get_and_delete( cli, "k1", "v1")
-    cli.dropConnections()
+        cli._masterId = None
+        Common.set_get_and_delete( cli, "k1", "v1")
+        cli.dropConnections()
+
+    try:
+        X.subprocess.check_call("sudo /sbin/iptables -F".split(' ') )
+        _inner()
+    finally:
+        X.subprocess.check_call("sudo /sbin/iptables -F".split(' ') )

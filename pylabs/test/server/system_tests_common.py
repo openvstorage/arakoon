@@ -651,7 +651,6 @@ def setup_n_nodes_base(c_id, node_names, force_master,
                        witness_nodes = False, useIPV6=False,
                        slowCollapser = False):
 
-    X.subprocess.check_call("sudo /sbin/iptables -F".split(' ') )
 
     cluster = _getCluster( c_id )
     cluster.tearDown()
