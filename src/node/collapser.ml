@@ -239,6 +239,7 @@ let collapse_out_of_band cfg name tlogs_to_keep =
   Tlc2.make_tlc2 ~compressor:me.compressor
                  me.tlog_dir me.tlx_dir me.head_dir
                  ~fsync:true name ~fsync_tlog_dir:true
+                 ~write_marker:false
   >>= fun tlog_coll ->
 
   collapse_many
