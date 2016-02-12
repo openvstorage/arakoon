@@ -581,7 +581,8 @@ class tlc2
 
 
 
-let make_tlc2 ~compressor
+let make_tlc2 ?(write_marker=true)
+              ~compressor
               ?tlog_max_entries ?tlog_max_size
               tlog_dir tlf_dir
               head_dir ~fsync node_id ~fsync_tlog_dir
@@ -608,13 +609,20 @@ let make_tlc2 ~compressor
          let v = Entry.v_of e in
          let marker = Some (_make_open_marker node_id) in
          _init_file fsync_tlog_dir tlog_map >>= fun file ->
-         let oc = F.oc_of file in
-         Tlogcommon.write_marker oc i v marker >>= fun () ->
-         Logger.debug_f_ "wrote %S marker @i=%s for %S"
-                         (Log_extra.string_option2s marker)
-                         (Sn.string_of i)
-                         node_id
-         >>= fun () ->
+         begin
+           if write_marker
+           then
+             begin
+               let oc = F.oc_of file in
+               Tlogcommon.write_marker oc i v marker >>= fun () ->
+               Logger.debug_f_ "wrote %S marker @i=%s for %S"
+                               (Log_extra.string_option2s marker)
+                               (Sn.string_of i)
+                               node_id
+             end
+           else
+             Lwt.return_unit
+         end >>= fun () ->
          Lwt.return (Some file)
   end >>= fun file ->
   let col = new tlc2 head_dir last index
