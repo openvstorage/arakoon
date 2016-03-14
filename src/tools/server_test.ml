@@ -21,7 +21,11 @@ open Lwt
 
 let section = Lwt_log.Section.main
 
-let echo_protocol (ic,oc,_cid) =
+let echo_protocol conn =
+  let open Server in
+  let ic = conn.ic
+  and oc = conn.oc
+  in
   let size = 1024 in
   let buffer = Bytes.create size in
   let rec loop () =
@@ -81,7 +85,12 @@ let test_max_connections () =
     Lwt.wakeup notifier () ;
     Lwt.return ()
   in
-  let echo_protocol2 (ic,oc,cid) =
+  let echo_protocol2 conn =
+    let open Server in
+    let ic = conn.ic
+    and oc = conn.oc
+    and cid = conn.cid
+    in
     let rec loop () =
       Llio.input_string ic >>= fun s ->
       Logger.debug_f_ "%S read %S" cid s >>= fun () ->

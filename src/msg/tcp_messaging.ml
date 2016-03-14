@@ -381,14 +381,15 @@ class tcp_messaging
           "connection from (%s,%i) was idle too long (> %f)"
           ip port timeout
       in
-      let protocol (ic,_oc,_cid) =
-        Lwt_unix.with_timeout timeout (fun () -> read_prologue ic)
+      let protocol conn =
+        let open Server in
+        Lwt_unix.with_timeout timeout (fun () -> read_prologue conn.ic)
         >>= fun address ->
         let rec loop b0 =
           begin
             Lwt.pick [
               die_after timeout address;
-              next_message b0 address ic]
+              next_message b0 address conn.ic]
             >>= fun b1 ->
             loop b1
           end
