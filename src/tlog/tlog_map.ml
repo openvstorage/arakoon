@@ -598,7 +598,7 @@ module TlogMap = struct
            let should_fold =
              match fn_next with
              | None -> fn_start <= low_n
-             | Some next -> fn_start <= low_n && low_n < next
+             | Some next -> fn_start <= low_n && low_n <= next
            in
            if should_fold
            then
