@@ -166,13 +166,30 @@ module MasterLookupResult = struct
   exception Error of t
 end
 
+let get_tls_from_ssl_cfg (ssl_cfg : Arakoon_client_config.ssl_cfg option) =
+  let open Arakoon_client_config in
+  match ssl_cfg with
+  | None -> None
+  | Some ssl ->
+     let ca_cert = ssl.ca_cert in
+     let protocol = ssl.protocol in
+     let creds = ssl.creds in
+     let ctx = default_create_client_context ~ca_cert ~creds ~protocol in
+     Some ctx
+
+let get_tls_from_cluster_cfg cluster_cfg =
+  get_tls_from_ssl_cfg cluster_cfg.Arakoon_client_config.ssl_cfg
+
+
 (** Lookup a master node in a cluster
 
     The result is wrapped in a {! MasterLookupResult.t }, including (if
     applicable) exceptions, except {! Lwt.Canceled } which is passed through
     (you most likely don't want to catch that anyway).
 *)
-let find_master' ~tls ~tcp_keepalive cluster_cfg =
+let find_master' ~tcp_keepalive cluster_cfg =
+  let tls = get_tls_from_cluster_cfg cluster_cfg in
+
   let open Arakoon_client_config in
 
   let lookup_cfg n =
@@ -268,10 +285,10 @@ let find_master' ~tls ~tcp_keepalive cluster_cfg =
     In some circumstances, this action could loop forever, so it's mostly
     useful in combination with {! Lwt_unix.with_timeout } or something related.
 *)
-let find_master_loop ~tls ~tcp_keepalive cluster_cfg =
+let find_master_loop ~tcp_keepalive cluster_cfg =
   let open MasterLookupResult in
   let rec loop () =
-    find_master' ~tls ~tcp_keepalive cluster_cfg >>= fun r -> match r with
+    find_master' ~tcp_keepalive cluster_cfg >>= fun r -> match r with
       | No_master
       | Too_many_nodes_down -> begin
           Logger.debug_f_ "Client_main.find_master_loop: %s" (to_string r) >>=
@@ -283,10 +300,14 @@ let find_master_loop ~tls ~tcp_keepalive cluster_cfg =
   in
   loop ()
 
-let with_master_client' ~tls ~tcp_keepalive cluster_cfg f =
+let with_master_client' ~tcp_keepalive cluster_cfg f =
   let open MasterLookupResult in
-  find_master' ~tls ~tcp_keepalive cluster_cfg >>= function
+  find_master' ~tcp_keepalive cluster_cfg >>= function
   | Found (master_name, master_cfg) ->
-    with_client' ~tls ~tcp_keepalive master_cfg cluster_cfg.Arakoon_client_config.cluster_id f
+     with_client' ~tls:(get_tls_from_cluster_cfg cluster_cfg)
+                  ~tcp_keepalive
+                  master_cfg
+                  cluster_cfg.Arakoon_client_config.cluster_id
+                  f
   | master_result ->
     Lwt.fail (Error master_result)

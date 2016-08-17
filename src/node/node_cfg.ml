@@ -18,8 +18,6 @@ limitations under the License.
 
 let section = Logger.Section.main
 
-let config_url = ref (Arakoon_config_url.make "cfg/arakoon.ini")
-
 let default_lease_period = 10
 let default_max_value_size = 8 * 1024 * 1024
 let default_max_buffer_size = 32 * 1024 * 1024
@@ -259,13 +257,13 @@ module Node_cfg = struct
       Arakoon_client_config.port = cfg.client_port;
     }
 
-  let to_client_cfg (t : cluster_cfg) =
+  let to_client_cfg (t : cluster_cfg) ~ssl_cfg =
     { Arakoon_client_config.cluster_id = t.cluster_id;
       Arakoon_client_config.node_cfgs =
         List.map
           (fun (cfg : t) -> cfg.node_name, node_cfg_to_node_client_cfg cfg)
           t.cfgs;
-      Arakoon_client_config.ssl_cfg = None;
+      Arakoon_client_config.ssl_cfg = ssl_cfg;
     }
 
   let string_of_cluster_cfg c =
@@ -784,10 +782,6 @@ module Node_cfg = struct
   let client_addresses t = (t.ips, t.client_port)
 
   let get_master t = t.master
-
-  let retrieve_cfg url = Arakoon_config_url.retrieve url >|= _retrieve_cfg_from_txt
-
-  let retrieve_client_cfg url = retrieve_cfg url >>= fun cfg -> Lwt.return (to_client_cfg cfg)
 
   let test ccfg ~cluster_id = ccfg.cluster_id = cluster_id
 

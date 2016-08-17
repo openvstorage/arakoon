@@ -14,14 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 *)
 
+open Node_cfg.Node_cfg
 open OUnit
-open Node_cfg
-open Node_cfg
 open Lwt.Infix
-let test_correctness () =
 
+let test_correctness () =
   let t =
-    Node_cfg.retrieve_cfg !config_url >>= fun cfg ->
+    let open Arakoon_config_url in
+    retrieve_cfg !default_url >>= fun cfg ->
     let r = OUnit.assert_equal cfg.cluster_id "ricky" in
     Lwt.return r
   in

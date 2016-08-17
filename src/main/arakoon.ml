@@ -315,7 +315,7 @@ let main () =
      "run system tests (you need a running installation)");
     ("--version", set_laction ShowVersion, "shows version");
     (* ("-port", Arg.Set_int port, "specifies server port"); *)
-    ("-config", Arg.String (fun s -> config_url := Arakoon_config_url.make s),
+    ("-config", Arg.String (fun s -> Arakoon_config_url.default_url := Arakoon_config_url.make s),
      "specifies config url (if protocol is absent, 'file' is assumed; default = cfg/arakoon.ini )");
     ("-autofix", Arg.Set autofix, "attempt to autofix (option to -node)");
     ("-catchup-only", Arg.Set catchup_only,
@@ -431,10 +431,11 @@ let main () =
   let options = [] in
   let interface = actions @ options in
 
-  let make_config () = Node_cfg.retrieve_cfg !config_url in
+  let config_url = Arakoon_config_url.default_url in
+  let make_config () = Arakoon_config_url.retrieve_cfg !config_url in
   let tcp_keepalive = default_tcp_keepalive in
 
-  let do_local ~tls = function
+  let do_local ~ssl_cfg = function
     | ShowUsage -> print_endline usage;0
     | RunAllTests -> run_all_tests ()
     | RunAllTestsXML -> run_all_tests_xml !xml_filename
@@ -452,61 +453,68 @@ let main () =
     | TruncateTlog -> Tlc2.truncate_tlog !filename
     | CompressTlog -> Tlog_main.compress_tlog !filename !archive_type
     | UncompressTlog -> Tlog_main.uncompress_tlog !filename
-    | SET -> Client_main.set ~tls !config_url !key !value
-    | GET -> Client_main.get ~tls !config_url !key
-    | PREFIX -> Client_main.prefix ~tls !config_url !key !max_results
-    | DELETE_PREFIX -> Client_main.delete_prefix ~tls !config_url !key
-    | NOP -> Client_main.nop ~tls !config_url
-    | BENCHMARK ->Client_main.benchmark ~tls !config_url
-      !key_size !value_size !tx_size !max_n
-      !n_clients !scenario
-    | LOAD -> Load_client.main ~tls !config_url
-                !n_clients
-    | DELETE -> Client_main.delete ~tls !config_url !key
-    | USER_FUNCTION -> Client_main.user_function ~tls !config_url
+    | SET -> Client_main.set ~ssl_cfg !config_url !key !value
+    | GET -> Client_main.get ~ssl_cfg !config_url !key
+    | PREFIX -> Client_main.prefix ~ssl_cfg !config_url !key !max_results
+    | DELETE_PREFIX -> Client_main.delete_prefix ~ssl_cfg !config_url !key
+    | NOP -> Client_main.nop ~ssl_cfg !config_url
+    | BENCHMARK ->
+       Client_main.benchmark ~ssl_cfg !config_url
+                             !key_size !value_size !tx_size !max_n
+                             !n_clients !scenario
+    | LOAD -> Load_client.main ~ssl_cfg !config_url
+                               !n_clients
+    | DELETE -> Client_main.delete ~ssl_cfg !config_url !key
+    | USER_FUNCTION -> Client_main.user_function ~ssl_cfg !config_url
                                                  !key !value_option
-    | WHO_MASTER -> Client_main.who_master ~tls !config_url ()
-    | EXPECT_PROGRESS_POSSIBLE -> Client_main.expect_progress_possible ~tls !config_url
-    | STATISTICS -> Client_main.statistics ~tls !config_url
+    | WHO_MASTER -> Client_main.who_master ~ssl_cfg !config_url ()
+    | EXPECT_PROGRESS_POSSIBLE -> Client_main.expect_progress_possible ~ssl_cfg !config_url
+    | STATISTICS -> Client_main.statistics ~ssl_cfg !config_url
     | Collapse_local -> Collapser_main.collapse_local make_config !node_id !n_tlogs
 
     | Collapse_remote -> Collapser_main.collapse_remote
-                           ~tls ~tcp_keepalive
+                           ~tls:(Client_helper.get_tls_from_ssl_cfg ssl_cfg)
+                           ~tcp_keepalive
                            !ip !port !cluster_id !n_tlogs
     | Backup_db -> Nodestream_main.get_db
-                     ~tls ~tcp_keepalive
+                     ~tls:(Client_helper.get_tls_from_ssl_cfg ssl_cfg)
+                     ~tcp_keepalive
                      !ip !port !cluster_id !location
     | Optimize_db -> Nodestream_main.optimize_db
-                       ~tls ~tcp_keepalive
+                       ~tls:(Client_helper.get_tls_from_ssl_cfg ssl_cfg)
+                       ~tcp_keepalive
                        !ip !port !cluster_id
     | Defrag_db   -> Nodestream_main.defrag_db
-                       ~tls ~tcp_keepalive
+                       ~tls:(Client_helper.get_tls_from_ssl_cfg ssl_cfg)
+                       ~tcp_keepalive
                        !ip !port !cluster_id
     | Copy_db_to_head -> Nodestream_main.copy_db_to_head
-                           ~tls ~tcp_keepalive
+                           ~tls:(Client_helper.get_tls_from_ssl_cfg ssl_cfg)
+                           ~tcp_keepalive
                            !ip !port !cluster_id
-    | NumberOfValues -> Client_main.get_key_count ~tls !config_url ()
+    | NumberOfValues -> Client_main.get_key_count ~ssl_cfg !config_url ()
     | InitNursery -> Nursery_main.init_nursery !config_url !cluster_id
     | MigrateNurseryRange -> Nursery_main.migrate_nursery_range
                                !config_url !left_cluster !separator !right_cluster
     | DeleteNurseryCluster -> Nursery_main.delete_nursery_cluster !config_url !cluster_id !separator
     | PING -> Client_main.ping
-                ~tls ~tcp_keepalive
+                ~tls:(Client_helper.get_tls_from_ssl_cfg ssl_cfg)
+                ~tcp_keepalive
                 !ip !port !cluster_id
-    | NODE_VERSION -> Client_main.node_version ~tls !node_id !config_url
-    | NODE_STATE   -> Client_main.node_state ~tls !node_id !config_url
+    | NODE_VERSION -> Client_main.node_version ~ssl_cfg !node_id !config_url
+    | NODE_STATE   -> Client_main.node_state ~ssl_cfg !node_id !config_url
     | InjectAsHead -> Dump_store.inject_as_head !filename !node_id !config_url
                         ~force:(!force) ~in_place:(!in_place)
     | Drop_master -> Nodestream_main.drop_master
-                       ~tls ~tcp_keepalive
+                       ~tls:(Client_helper.get_tls_from_ssl_cfg ssl_cfg) ~tcp_keepalive
                        !ip !port !cluster_id
     | RANGE_ENTRIES ->
        Client_main.range_entries
-         ~tls !config_url
+         ~ssl_cfg !config_url
          !left !linc !right !rinc !max_results
     | REV_RANGE_ENTRIES ->
        Client_main.rev_range_entries
-         ~tls !config_url
+         ~ssl_cfg !config_url
          !left !linc !right !rinc !max_results
 
   in
@@ -545,23 +553,21 @@ let main () =
     (fun x -> raise (Arg.Bad ("Bad argument : " ^ x)))
     usage;
 
-  let tls =
+  let ssl_cfg =
     if !tls_ca_cert = ""
       then None
-      else begin
-        let ca_cert = !tls_ca_cert
-        and protocol = match !tls_version with
-          | "1.0" -> Ssl.TLSv1
-          | "1.1" -> Ssl.TLSv1_1
-          | "1.2" -> Ssl.TLSv1_2
-          | _ -> failwith "Invalid \"tls-version\" value"
-        and creds = match !tls_cert with
-          | "" -> None
-          | s -> Some (s, !tls_key)
-        in
-        let ctx = Client_main.default_create_client_context ~ca_cert ~creds ~protocol in
-        Some ctx
-      end
+      else
+        Some Arakoon_client_config.(
+        { ca_cert = !tls_ca_cert;
+          creds = (match !tls_cert with
+                   | "" -> None
+                   | s -> Some (s, !tls_key));
+          protocol = (match !tls_version with
+                      | "1.0" -> Ssl.TLSv1
+                      | "1.1" -> Ssl.TLSv1_1
+                      | "1.2" -> Ssl.TLSv1_2
+                      | _ -> failwith "Invalid \"tls-version\" value");
+        })
   in
 
   let exit_code =
@@ -570,7 +576,7 @@ let main () =
        List.iter
          (fun s -> Sys.set_signal s Sys.Signal_ignore)
          [ Sys.sigusr1; Sys.sigusr2 ];
-       do_local ~tls la
+       do_local ~ssl_cfg la
     | ServerAction sa -> do_server sa
   in
   (* let () = Printf.printf "[rc=%i]\n" rc in *)

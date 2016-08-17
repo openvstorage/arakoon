@@ -38,6 +38,7 @@ let cucu s =
   Lwt_io.flush Lwt_io.stderr
 
 let _CLUSTER = "sweety"
+let ssl_cfg = None
 
 type real_test = Arakoon_client.client -> unit Lwt.t
 
@@ -61,7 +62,7 @@ let __client_server_wrapper__ (real_test:real_test) =
     let sp = float(lease_period) *. 0.5 in
     Lwt_unix.sleep sp >>= fun () -> (* let the cluster reach stability *)
     Logger.info_ "cluster should have reached stability" >>= fun () ->
-    Client_main.find_master ~tls:None cluster_cfg >>= fun master_name ->
+    Client_main.find_master cluster_cfg ~ssl_cfg >>= fun master_name ->
     Logger.info_f_ "master=%S" master_name >>= fun () ->
     let master_cfg =
       List.hd
