@@ -14,19 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 *)
 
-open Node_cfg.Node_cfg
-open OUnit
-open Lwt.Infix
+type compressor =
+  | No
+  | Bz2
+  | Snappy
 
-let test_correctness () =
-  let t =
-    let open Arakoon_config_url in
-    retrieve_cfg !default_url >>= fun cfg ->
-    let r = OUnit.assert_equal cfg.cluster_id "ricky" in
-    Lwt.return r
-  in
-  Lwt_main.run t
-
-let suite = "node_cfg" >::: [
-      "correctness" >:: test_correctness;
-    ]
+let compressor2s = function
+  | No -> "No"
+  | Bz2 -> "Bz2"
+  | Snappy -> "Snappy"

@@ -21,7 +21,7 @@ open Arakoon_client
 open Master_type
 
 let section = Logger.Section.main
-
+let ssl_cfg = None
 let should_fail = Arakoon_remote_client_test.should_fail
 
 let _start tn =
@@ -34,7 +34,7 @@ let all_same_master (_tn, make_cluster_cfg, all_t) =
     Lwt_unix.sleep q >>= fun () ->
     Logger.debug_ "start of scenario" >>= fun () ->
     let set_one client = client # set "key" "value" in
-    Client_main.find_master ~tls:None cluster_cfg >>= fun master_name ->
+    Client_main.find_master cluster_cfg ~ssl_cfg >>= fun master_name ->
     let master_cfg = List.hd (List.filter (fun cfg -> cfg.node_name = master_name)
                                 cluster_cfg.cfgs)
     in
@@ -84,7 +84,7 @@ let nothing_on_slave (_tn, make_cluster_cfg, all_t) =
   make_cluster_cfg () >>= fun cluster_cfg ->
   let cfgs = cluster_cfg.cfgs in
   let find_slaves cfgs =
-    Client_main.find_master ~tls:None cluster_cfg >>= fun m ->
+    Client_main.find_master cluster_cfg ~ssl_cfg >>= fun m ->
     let slave_cfgs = List.filter (fun cfg -> cfg.node_name <> m) cfgs in
     Lwt.return slave_cfgs
   in
@@ -137,7 +137,7 @@ let dirty_on_slave (_tn, make_cluster_cfg,_) =
   Lwt_unix.sleep (float (cluster_cfg._lease_period)) >>= fun () ->
   Logger.debug_ "dirty_on_slave" >>= fun () ->
   let cfgs = cluster_cfg.cfgs in
-  Client_main.find_master ~tls:None cluster_cfg >>= fun master_name ->
+  Client_main.find_master cluster_cfg ~ssl_cfg >>= fun master_name ->
   let master_cfg = List.hd (List.filter (fun cfg -> cfg.node_name = master_name)
                               cluster_cfg.cfgs)
   in
@@ -561,15 +561,14 @@ let _multi_get_option (client:client) =
       Lwt.fail (Failure "bad order or arity")
 
 
-let find_master ~tls cluster_cfg =
+let find_master cluster_cfg =
   let lp = cluster_cfg._lease_period in
   let timeout = 3 * lp in
   let go () =
     let open Client_helper.MasterLookupResult in
     Client_helper.find_master_loop
-      ~tls
       ~tcp_keepalive:Node_cfg.default_tcp_keepalive
-      (Node_cfg.Node_cfg.to_client_cfg cluster_cfg) >>= function
+      (Node_cfg.Node_cfg.to_client_cfg cluster_cfg ~ssl_cfg) >>= function
       | Found (name, cfg) -> return name
       | No_master -> Lwt.fail (Failure "No Master")
       | Too_many_nodes_down -> Lwt.fail (Failure "too many nodes down")
@@ -583,7 +582,7 @@ let _with_master ((_tn:string), make_cluster_cfg, _) f =
   let sp = float(cluster_cfg._lease_period) *. 0.5 in
   Lwt_unix.sleep sp >>= fun () -> (* let the cluster reach stability *)
   Logger.info_ "cluster should have reached stability" >>= fun () ->
-  find_master ~tls:None cluster_cfg >>= fun master_name ->
+  find_master cluster_cfg >>= fun master_name ->
   Logger.info_f_ "master=%S" master_name >>= fun () ->
   let master_cfg =
     List.hd

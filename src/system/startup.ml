@@ -25,6 +25,7 @@ open Master_type
 open Tlogcommon
 
 let section = Logger.Section.main
+let ssl_cfg = None
 
 module LS = (val (Store.make_store_module (module Mem_store)))
 
@@ -315,7 +316,7 @@ let ahead_master_loses_role () =
   (* sleep a bit so the previous 2 slaves can make progress *)
   Lwt_unix.sleep ((float lease_period) *. 3.0) >>= fun () ->
   Lwt.catch
-    (fun () -> Client_main.find_master cluster_cfg ~tls:None >>= fun master ->
+    (fun () -> Client_main.find_master cluster_cfg ~ssl_cfg >>= fun master ->
                Lwt.return_unit)
     (fun exn ->
       Logger.fatal_f_ ~exn "NO MASTER" >>= fun () ->
@@ -432,7 +433,7 @@ let interrupted_election () =
   let rec phase2 () =
     Lwt.catch
       (fun () ->
-       Client_main.find_master ~tls:None cluster_cfg >>= fun m ->
+       Client_main.find_master cluster_cfg ~ssl_cfg >>= fun m ->
        if m <> wannabe_master
        then Lwt.return true
        else Lwt.return false)

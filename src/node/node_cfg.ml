@@ -18,8 +18,6 @@ limitations under the License.
 
 let section = Logger.Section.main
 
-let config_url = ref (Arakoon_config_url.make "cfg/arakoon.ini")
-
 let default_lease_period = 10
 let default_max_value_size = 8 * 1024 * 1024
 let default_max_buffer_size = 32 * 1024 * 1024
@@ -150,7 +148,7 @@ module Node_cfg = struct
             is_learner : bool;
             is_witness : bool;
             targets : string list;
-            compressor : Compression.compressor;
+            compressor : Compression_type.compressor;
             fsync : bool;
             _fsync_tlog_dir : bool;
             is_test : bool;
@@ -181,7 +179,7 @@ module Node_cfg = struct
            ; "is_learner", bool t.is_learner
            ; "is_witness", bool t.is_witness
            ; "targets", list id t.targets
-           ; "compressor", Compression.compressor2s t.compressor
+           ; "compressor", Compression_type.compressor2s t.compressor
            ; "fsync", bool t.fsync
            ; "is_test", bool t.is_test
            ; "reporting", int t.reporting
@@ -259,13 +257,13 @@ module Node_cfg = struct
       Arakoon_client_config.port = cfg.client_port;
     }
 
-  let to_client_cfg (t : cluster_cfg) =
+  let to_client_cfg (t : cluster_cfg) ~ssl_cfg =
     { Arakoon_client_config.cluster_id = t.cluster_id;
       Arakoon_client_config.node_cfgs =
         List.map
           (fun (cfg : t) -> cfg.node_name, node_cfg_to_node_client_cfg cfg)
           t.cfgs;
-      Arakoon_client_config.ssl_cfg = None;
+      Arakoon_client_config.ssl_cfg = ssl_cfg;
     }
 
   let string_of_cluster_cfg c =
@@ -314,7 +312,7 @@ module Node_cfg = struct
         is_learner = false;
         is_witness = false;
         targets = [];
-        compressor = Compression.Snappy;
+        compressor = Compression_type.Snappy;
         fsync = false;
         _fsync_tlog_dir = false;
         is_test = true;
@@ -547,16 +545,16 @@ module Node_cfg = struct
     let is_witness = get_bool "witness" in
     let compressor =
       if get_bool "disable_tlog_compression"
-      then Compression.No
+      then Compression_type.No
       else
         begin
           let s = Ini.get inifile node_name "tlog_compression" Ini.p_string
                           (Ini.default "snappy")
           in
           match String.lowercase_ascii s with
-          | "snappy"  -> Compression.Snappy
-          | "bz2"     -> Compression.Bz2
-          | "none"    -> Compression.No
+          | "snappy"  -> Compression_type.Snappy
+          | "bz2"     -> Compression_type.Bz2
+          | "none"    -> Compression_type.No
           | _         -> failwith (Printf.sprintf "no compressor named %s" s)
         end
     in
@@ -785,102 +783,7 @@ module Node_cfg = struct
 
   let get_master t = t.master
 
-  let retrieve_cfg url = Arakoon_config_url.retrieve url >|= _retrieve_cfg_from_txt
-
-  let retrieve_client_cfg url = retrieve_cfg url >>= fun cfg -> Lwt.return (to_client_cfg cfg)
-
   let test ccfg ~cluster_id = ccfg.cluster_id = cluster_id
-
-  open Lwt
-  let validate_dirs t =
-    Logger.debug_ "Node_cfg.validate_dirs" >>= fun () ->
-    if t.is_test then Lwt.return ()
-    else
-      begin
-        let is_ok name =
-          try
-            let s = Unix.stat name in s.Unix.st_kind = Unix.S_DIR
-          with _ -> false
-        in
-        let verify_exists dir msg exn =
-          if not (is_ok dir)
-          then
-            begin
-              Logger.fatal_f_ "%s '%s' doesn't exist, or insufficient permissions" msg dir >>= fun () ->
-              Lwt.fail exn
-            end
-          else
-            Lwt.return ()
-        in
-
-        let verify_writable dir msg exn =
-          let handle_exn =
-            (* Work-around: Logger macro doesn't accept an 'exn' argument not
-             * called 'exn' *)
-            let log exn =
-              Logger.fatal_f_ ~exn "Failure while verifying %s '%s'" msg dir
-            in
-            function
-              (* Set of exceptions we map to some specific exit code *)
-              | Unix.Unix_error(Unix.EPERM, _, _)
-              | Unix.Unix_error(Unix.EACCES, _, _)
-              | Unix.Unix_error(Unix.EROFS, _, _)
-              | Unix.Unix_error(Unix.ENOSPC, _, _) as e ->
-                  log e >>= fun () ->
-                  Lwt.fail exn
-              | e ->
-                  log e >>= fun () ->
-                  Lwt.fail e
-          in
-
-
-          let safe_unlink fn =
-            Lwt.catch
-              (fun () -> File_system.unlink fn)
-              handle_exn in
-
-          let fn = Printf.sprintf "%s/touch-%d" dir (Unix.getpid ()) in
-
-          let check () =
-            safe_unlink fn >>= fun () ->
-            let go () =
-              Logger.debug_f_ "Touching %S" fn >>= fun () ->
-              Lwt_unix.openfile fn
-                [Lwt_unix.O_RDWR; Lwt_unix.O_CREAT; Lwt_unix.O_EXCL]
-                0o600 >>= fun fd ->
-
-              Lwt.finalize
-                (fun () ->
-                  Logger.debug_f_ "Write byte to %S" fn >>= fun () ->
-                  Lwt_unix.write fd "0" 0 1 >>= fun _ ->
-                  if t._fsync_tlog_dir
-                  then
-                    begin
-                      Logger.debug_f_ "Fsync %S" fn >>= fun () ->
-                      Lwt_unix.fsync fd
-                    end
-                  else
-                    Lwt.return ())
-                (fun () ->
-                  Lwt_unix.close fd)
-            in
-            Lwt.catch go handle_exn
-          in
-
-          Lwt.finalize check (fun () -> safe_unlink fn)
-        in
-
-        let verify dir msg exn =
-          verify_exists dir msg exn >>= fun () ->
-          verify_writable dir msg exn
-        in
-
-        verify t.home "Home dir" (InvalidHomeDir t.home) >>= fun () ->
-        verify t.tlog_dir "Tlog dir" (InvalidTlogDir t.tlog_dir) >>= fun () ->
-        verify t.tlx_dir "Tlx dir" (InvalidTlxDir t.tlx_dir) >>= fun () ->
-        verify t.head_dir "Head dir" (InvalidHeadDir t.head_dir)
-
-      end
 
   let split node_name cfgs =
     let rec loop me_o others = function

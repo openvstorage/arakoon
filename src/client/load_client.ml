@@ -16,10 +16,10 @@ limitations under the License.
 
 open Lwt
 
-let load_scenario ~tls cfg_name x =
+let load_scenario cfg_name ~ssl_cfg x =
   let f cn =
-    Client_main.with_master_client ~tls
-      cfg_name
+    Client_main.with_master_client
+      cfg_name ~ssl_cfg
       (fun client ->
          let rec loop i =
            if i = 1000
@@ -45,4 +45,4 @@ let load_scenario ~tls cfg_name x =
   in
   Lwt_list.iter_p f cnis
 
-let main ~tls cfg_name n = Lwt_main.run (load_scenario ~tls cfg_name n);0
+let main cfg_name ~ssl_cfg n = Lwt_main.run (load_scenario cfg_name ~ssl_cfg n);0

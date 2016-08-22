@@ -19,15 +19,7 @@ limitations under the License.
 open Lwt
 open Tlogcommon
 
-type compressor =
-  | No
-  | Bz2
-  | Snappy
-
-let compressor2s = function
-  | No -> "No"
-  | Bz2 -> "Bz2"
-  | Snappy -> "Snappy"
+include Compression_type
 
 let compress_bz2 b =
   Bz2.compress ~block:9 b 0 (String.length b)

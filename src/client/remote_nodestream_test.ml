@@ -29,6 +29,7 @@ let teardown () = Lwt.return ()
 let section = Logger.Section.main
 
 let cluster_id = "baby1"
+let ssl_cfg = None
 
 let __wrap__ port conversation =
   let stop = ref false in
@@ -48,7 +49,7 @@ let __wrap__ port conversation =
     let sp = float(lease_period) *. 0.5 in
     Lwt_unix.sleep sp >>= fun () -> (* let the cluster reach stability *)
     Logger.info_ "cluster should have reached stability" >>= fun () ->
-    Client_main.find_master ~tls:None cluster_cfg >>= fun master_name ->
+    Client_main.find_master cluster_cfg ~ssl_cfg >>= fun master_name ->
     Logger.info_f_ "master=%S" master_name >>= fun () ->
     let master_cfg =
       List.hd

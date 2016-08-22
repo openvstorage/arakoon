@@ -542,7 +542,7 @@ let _main_2 (type s)
         let head_copied = ref false in
         let _open_tlc_and_store () =
           Logger.debug_ "_open_tlc_and_store" >>= fun () ->
-          Node_cfg.Node_cfg.validate_dirs me >>= fun () ->
+          Node_cfg_extra.validate_dirs me >>= fun () ->
           Logger.debug_ "validated directories" >>= fun () ->
           let snapshot_name = get_snapshot_name() in
           let full_snapshot_path = Filename.concat me.head_dir snapshot_name in

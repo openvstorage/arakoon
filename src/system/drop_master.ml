@@ -20,7 +20,7 @@ open Master_type
 open Node_cfg.Node_cfg
 
 let section = Logger.Section.main
-
+let ssl_cfg = None
 let stop = ref (ref false)
 
 let setup tn master base () =
@@ -39,7 +39,7 @@ let setup tn master base () =
 let find_master cluster_cfg =
   Lwt.catch
     (fun () ->
-      Client_main.find_master ~tls:None cluster_cfg >>= fun m ->
+      Client_main.find_master cluster_cfg ~ssl_cfg >>= fun m ->
       Lwt.return (Some m))
     (function
     | Failure "too many nodes down"
@@ -74,7 +74,7 @@ let _drop_master do_maintenance
   let lease_period = cluster_cfg._lease_period in
   let sp = (float lease_period) *. 1.2 in
   Lwt_unix.sleep sp >>= fun () -> (* let the cluster reach stability *)
-  Client_main.find_master ~tls:None cluster_cfg >>= fun master_name ->
+  Client_main.find_master cluster_cfg ~ssl_cfg >>= fun master_name ->
   if do_maintenance
   then
     begin
@@ -108,7 +108,7 @@ let _drop_master do_maintenance
          if not do_maintenance
          then
            begin
-             Client_main.find_master ~tls:None cluster_cfg >>= fun new_master ->
+             Client_main.find_master cluster_cfg ~ssl_cfg >>= fun new_master ->
              Logger.info_f_ "new? master = %s" new_master >>= fun () ->
              OUnit.assert_bool "master should have been changed" (new_master <> master_name);
              Lwt.return ()

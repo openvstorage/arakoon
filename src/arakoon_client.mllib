@@ -39,3 +39,8 @@ Typed_ssl
 Unix_fd
 Tcp_keepalive
 Lwt_buffer
+Node_cfg
+Quorum
+Compression_type
+Master_type
+To_string
