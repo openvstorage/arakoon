@@ -15,7 +15,7 @@ limitations under the License.
 """
 
 from arakoon.ArakoonExceptions import *
-from arakoon_system_tests.server import system_tests_common as C
+import system_tests_common as C
 #from right.system_tests_anomaly import *
 #from quick.system_tests_basic import *
 
@@ -53,7 +53,7 @@ restart_error_regexes = [
 restart_error_regexes.extend( network_error_regexes )
 
 monkey_disruptions_catalogue = [
-#    ( delayed_restart_1st_node, restart_error_regexes ) ,
+    ( C.delayed_restart_1st_node, restart_error_regexes ) ,
 #    ( delayed_restart_2nd_node, restart_error_regexes ) ,
 #    ( delayed_restart_3rd_node, restart_error_regexes ) ,
 #    ( delayed_restart_all_nodes, restart_error_regexes ) ,

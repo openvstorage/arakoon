@@ -421,7 +421,7 @@ def restart_all():
     cluster.restart()
 
 def rotate_logs( max_logs_to_keep = 5, compress_old_files = True):
-    for node_name in node_names:
+    for node_name in CONFIG.node_names:
         rotate_log( node_name, max_logs_to_keep, compress_old_files)
 
 def send_signal ( node_name, signal ):
@@ -445,7 +445,7 @@ def rotate_log(node_name, max_logs_to_keep, compress_old_files ):
     def shift_logs ( ) :
         log_to_remove = old_log_fmt % (max_logs_to_keep - 1)
         if X.fileExists ( log_to_remove ) :
-            fs.unlink(log_to_remove)
+            X.removeFile(log_to_remove)
 
         for i in range( 1, max_logs_to_keep - 1) :
             j = max_logs_to_keep - 1 - i

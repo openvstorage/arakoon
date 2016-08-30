@@ -16,8 +16,6 @@ limitations under the License.
 
 import sys
 
-from pymonkey import InitBase
-
 import copy
 import re
 import logging
@@ -28,9 +26,12 @@ import threading
 import time
 import os
 import nose.tools as NT
-from pymonkey import q
+import subprocess
+
 import arakoon_monkey_config as MConfig
-from arakoon_system_tests.server import system_tests_common as C
+import system_tests_common as C
+from Compat import X
+
 from arakoon.ArakoonProtocol import ArakoonProtocol
 from arakoon.ArakoonExceptions import *
 MEM_MAX_KB = 1024 * 256
@@ -40,7 +41,7 @@ monkey_dies = False
 random.seed(42)
 
 def get_monkey_work_dir() :
-    return q.system.fs.joinPaths( q.dirs.tmpDir, "arakoon_monkey" )
+    return "%s/arakoon_monkey" % (X.tmpDir,)
 
 def get_work_list_log_read ( iter_cnt ):
     return get_work_list_log ( iter_cnt, "r")
@@ -49,7 +50,7 @@ def get_work_list_log_write ( iter_cnt ):
     return get_work_list_log ( iter_cnt, "w")
 
 def get_work_list_log ( iter_cnt, flag ):
-    log_file_name = q.system.fs.joinPaths( get_monkey_work_dir() , "arakoon_monkey_%012d.wlist" % iter_cnt )
+    log_file_name = '%s/%s' % ( get_monkey_work_dir() , "arakoon_monkey_%012d.wlist" % iter_cnt )
     file = open( log_file_name , flag )
     return file
 
@@ -238,9 +239,11 @@ def health_check() :
 
     # Make sure all processes are running
     C.assert_running_nodes( 3 )
+    config = C.CONFIG
+    print "==================> before <==================="
 
     # Do a ping to all nodes
-    for node in C.node_names :
+    for node in config.node_names :
         try :
             con = cli._sendMessage( node, encodedPing )
             reply = con.decodeStringResult()
@@ -251,6 +254,8 @@ def health_check() :
 
     if ( monkey_dies ) :
         return
+
+    print "==================> after <==================="
 
     key = "@@some_key@@"
     value = "@@some_value@@"
@@ -266,15 +271,15 @@ def health_check() :
     C.stop_all()
     logging.info("tlogs in sync?")
     # Make sure the tlogs are in sync
-    C.assert_last_i_in_sync( C.node_names[0], C.node_names[1] )
-    C.assert_last_i_in_sync( C.node_names[1], C.node_names[2] )
+    C.assert_last_i_in_sync( config.node_names[0], config.node_names[1] )
+    C.assert_last_i_in_sync( config.node_names[1], config.node_names[2] )
     # Make sure the stores are equal
     logging.info("stores equal?")
-    C.compare_stores( C.node_names[0], C.node_names[1] )
-    C.compare_stores( C.node_names[2], C.node_names[1] )
+    C.compare_stores( config.node_names[0], config.node_names[1] )
+    C.compare_stores( config.node_names[2], config.node_names[1] )
 
 
-    cli._dropConnections()
+    cli.dropConnections()
 
     if not check_disk_space():
         logging.critical("SUCCES! Monkey filled the disk to its threshold")
@@ -286,12 +291,9 @@ def health_check() :
     logging.info("Cluster is healthy!")
 
 def check_disk_space():
-    cmd = "df -h | awk ' { if ($6==\"/\") print $5 } ' | cut -d '%' -f 1"
-    (exit,stdout,stderr) = q.system.process.run(cmd)
-    if( exit != 0 ):
-        raise Exception( "Could not determine free disk space" )
-    stdout = stdout.strip()
-    disk_free = int( stdout )
+    cmd = '''df -h | awk ' { if ($6=="/") print $5 } ' | cut -d '%' -f 1'''
+    result = subprocess.check_call(cmd, shell=True)
+    disk_free = int(result )
     free_threshold = 95
     if disk_free > free_threshold :
         return False
@@ -302,7 +304,7 @@ def memory_monitor():
     global monkey_dies
     global MAX_USED
     while monkey_dies == False :
-        for name in C.node_names:
+        for name in C.CONFIG.node_names:
             used = C.get_memory_usage( name )
             if used > MAX_USED:
                 MAX_USED = used
@@ -320,21 +322,23 @@ def make_monkey_run() :
 
     global monkey_dies
 
-    C.data_base_dir = '/opt/qbase3/var/tmp/arakoon-monkey'
+    C.data_base_dir = '/home/romain/workspace/tmp/arakoon/arakoon-monkey'
 
-    t = threading.Thread( target=memory_monitor)
-    t.start()
+    #t = threading.Thread( target=memory_monitor)
+    #t.start()
 
     C.stop_all()
-    cluster = q.manage.arakoon.getCluster(C.cluster_id)
+    cluster = C._getCluster()
     cluster.tearDown()
     #setup_3_nodes_forced_master()
     C.setup_3_nodes( C.data_base_dir )
+
     monkey_dir = get_monkey_work_dir()
-    if q.system.fs.exists( monkey_dir ) :
-        q.system.fs.removeDirTree( monkey_dir )
-    q.system.fs.createDir( monkey_dir )
+    if X.fileExists( monkey_dir ) :
+        X.removeDirTree( monkey_dir )
+    X.createDir( monkey_dir )
     iteration = 0
+
     C.start_all()
     time.sleep( 1.0 )
     while( True ) :
@@ -388,7 +392,7 @@ def make_monkey_run() :
         logging.info("stopped all, going to wipe")
         toWipe = C.node_names[random.randint(0,2)]
         logging.info("Wiping node %s" % toWipe)
-        C.whipe(toWipe)
+        C.wipe(toWipe)
         logging.info("starting all")
         C.start_all()
 
@@ -427,15 +431,8 @@ def send_email(from_addr, to_addr_list, cc_addr_list,
 
 def get_mail_escalation_cfg() :
 
-    cfg_file = q.config.getInifile("arakoon_monkey")
-    cfg_file_dict = cfg_file.getFileAsDict()
-
-    if ( len( cfg_file_dict.keys() ) == 0) :
-        raise Exception( "Escalation ini-file empty" )
-    if not cfg_file_dict.has_key ( "email" ):
-        raise Exception ( "Escalation ini-file does not have a 'email' section" )
-
-    cfg = cfg_file_dict [ "email" ]
+    cfg_file = X.getConfig("arakoon_monkey")
+    cfg  = cfg_file.sectionAsDict(cfg_file, 'email')
 
     required_keys = [
         "server",
@@ -488,7 +485,36 @@ def euthanize_this_monkey() :
     C.stop_all()
     sys.exit( 255 )
 
+
+
+def prologue():
+    root = os.environ.get('TEST_HOME')
+    if root is None:
+        root = os.environ['HOME']
+
+    bin_dir = '%s/apps/arakoon/bin' % root
+    bin = bin_dir +'/arakoon'
+
+    if not os.path.exists(bin_dir):
+        os.makedirs(bin_dir)
+    if not os.path.exists(bin):
+        subprocess.call(['cp','./arakoon.native', bin])
+        print "=> copying exec to: %s" % bin
+    else:
+        version = subprocess.check_output(['./arakoon.native','--version'])
+        version2 = subprocess.check_output([bin,'--version'])
+        if version <> version2:
+            print version,version2
+            print "=> copying exec"
+            subprocess.call(['cp','./arakoon.native', bin])
+        else:
+            print "not copying arakoon executable"
+
+
+prologue()
 if __name__ == "__main__" :
+    check_disk_space()
+    prologue()
     print sys.path
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
