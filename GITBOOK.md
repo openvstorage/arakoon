@@ -10,13 +10,6 @@ Arakoon aims to be easy to understand and use, whilst at the same time taking th
 * Healing & Recovery: Whenever a component dies and is subsequently revived or replaced, the system must be able to guide that component towards a situation where that node again fully participates. If this cannot be done fully automatically, then human intervention should be trivial.
 * Explicit Failure: Whenever there is something wrong, failure should propagate quite quickly.
 
-## Where is Arakoon used in Open vStorage?
-Arakoon is as database for various components of the Open vStorage cluster.
-* The cluster config (optional): Open vStorage uses a distributed configuration management system. The config values are stored in Arakoon (`arakoon_cacc`) or ETCD.
-* The [Framework](https://github.com/openvstorage/framework) model is stored in the DB named **ovsdb**. It stores the details or Storage Routers, vDisks, vMachine, vPools.
-* The [Volume Driver](https://github.com/openvstorage/volumedriver) model is stored in the DB named **voldrv**. It stores the Volume Driver cluster config, the metadata of the File System (mapping from /path/to/file -> object ID (volumedriver or filedriver object) exposed by the Volume Driver, the Object Registry - the location of objects in the cluster (which VolumeDriver in the cluster runs "owns" the file/volume), the family tree of a volume (clone-parent relation), replication , distributed locking and scrub management.
-* The metadata of the [ALBA backend](https://github.com/openvstorage/alba) are stored in a ABM DB and multiple NSM DBs. The NSM DBs (NameSpace Manager DBs) contain the meta of each stored fragment (ASD, manifest). A single NSM DB can contain data for different namespaces (volumes). The ABM DB (ALBA Manager) contains which NSM DB contains the metadata for which namespace/volume.
-
 ## An Arakoon deployment
 An Arakoon cluster consist of a small collection of nodes (typically 1,2,3 or 5 nodes) that contain the full range of key-value pairs, and clients that manipulate the key/value space. In principle, all nodes have the entire key/value space. There is one distinguished node called the master with which all clients communicate to perform updates. A client contacts any node to find out the master, and then just conversates with the master. If a master dies, a new one is elected automatically, and clients fail over to that master. A slave node is a node that is not master. A node that is not up-to-date cannot become master.
 
