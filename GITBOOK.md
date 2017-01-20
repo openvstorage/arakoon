@@ -11,12 +11,12 @@ Arakoon aims to be easy to understand and use, whilst at the same time taking th
 * Explicit Failure: Whenever there is something wrong, failure should propagate quite quickly.
 
 ## An Arakoon deployment
-An Arakoon cluster consist of a small collection of nodes (typically 1,2,3 or 5 nodes) that contain the full range of key-value pairs, and clients that manipulate the key/value space. In principle, all nodes have the entire key/value space. There is one distinguished node called the master with which all clients communicate to perform updates. A client contacts any node to find out the master, and then just conversates with the master. If a master dies, a new one is elected automatically, and clients fail over to that master. A slave node is a node that is not master. A node that is not up-to-date cannot become master.
+An Arakoon cluster consist of a small collection of nodes (typically 1,2,3 or 5 nodes) that contains the full range of key-value pairs, and clients that manipulate the key/value space. In principle, all nodes have the entire key/value space. There is one distinguished node called the master with which all clients communicate to perform updates. A client contacts any node to find out the master, and then just conversates with the master. If a master dies, a new one is elected automatically, and clients fail over to that master. A slave node is a node that is not master. A node that is not up-to-date cannot become master.
 
 The diagram below shows 3 clients connected to an Arakoon cluster that consists of 3 Arakoon nodes.
 ![](docs/Images/ArakoonDeployment.png)
 
-Update to the Arakoon database are consistent. An Arakoon client always looks up the master of a cluster and then sends a request to the master. The master node of a cluster has a queue of all client requests. The moment that a request is queued, the master node sends the request to all his slaves and writes the request in the Transaction Log (TLog). When the slaves receive a request, they store this also in their proper TLog and send an acknowledgement to the master.
+Updates to the Arakoon database are consistent. An Arakoon client always looks up the master of a cluster and then sends a request to the master. The master node of a cluster has a queue of all client requests. The moment that a request is queued, the master node sends the request to all his slaves and writes the request in the Transaction Log (TLog). When the slaves receive a request, they store this also in their proper TLog and send an acknowledgement to the master.
 
 A master awaits for the acknowledgements of the slaves. When he receives an acknowledgement of half the nodes plus one, the master pushes the key/value pair in its database. In a five node setup (one master and four slaves), the master must receive an acknowledgement of two slaves before he writes his data to the database, since he is also taken into account as node.
 
