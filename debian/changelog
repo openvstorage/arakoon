@@ -1,3 +1,8 @@
+arakoon (1.9.15_for_alba_1.3.4) unstable; urgency=low
+  * new upstream version
+
+ -- Romain Slootmaekers <romain.slootmaekers@openvstorage.com>  Fri, 20 Jan 2017 11:31:06 +0100
+
 arakoon (1.9.15) unstable; urgency=low
   * new upstream version
 
