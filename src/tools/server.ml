@@ -31,34 +31,48 @@ let close = function
   | Plain fd -> Lwt_unix.close fd
   | TLS fd -> Lwt_ssl.close fd
 
-let deny_max (_ic,oc,_cid) =
+type connection =
+  { fd : Lwt_unix.file_descr;
+    ic : Lwt_io.input_channel;
+    oc : Lwt_io.output_channel;
+    cid: string
+  }
+    
+let cork connection   = Lwt_unix.setsockopt connection.fd Lwt_unix.TCP_NODELAY false
+let uncork connection = Lwt_unix.setsockopt connection.fd Lwt_unix.TCP_NODELAY true
+
+let deny_max conn  =
   Logger.warning_ "max connections reached, denying this one" >>= fun () ->
-  Llio.output_int32 oc (Arakoon_exc.int32_of_rc Arakoon_exc.E_MAX_CONNECTIONS) >>= fun () ->
-  Llio.output_string oc "too many clients"
+  Llio.output_int32 conn.oc (Arakoon_exc.int32_of_rc Arakoon_exc.E_MAX_CONNECTIONS) >>= fun () ->
+  Llio.output_string conn.oc "too many clients"
 
-let deny_closing (_ic,oc,_cid) =
+let deny_closing conn =
   Logger.warning_ "closing socket, denying this one" >>= fun () ->
-  Llio.output_int32 oc (Arakoon_exc.int32_of_rc Arakoon_exc.E_GOING_DOWN) >>= fun () ->
-  Llio.output_string oc "closing socket"
+  Llio.output_int32 conn.oc (Arakoon_exc.int32_of_rc Arakoon_exc.E_GOING_DOWN) >>= fun () ->
+  Llio.output_string conn.oc "closing socket"
 
+
+    
 let session_thread (sid:string) cid protocol fd =
   Lwt.catch
     (fun () ->
-       let (ic, oc) = match fd with
+       let conn = match fd with
          | Plain fd' ->
              let ic = Lwt_io.of_fd ~close:Lwt.return ~mode:Lwt_io.input fd'
              and oc = Lwt_io.of_fd ~close:Lwt.return ~mode:Lwt_io.output fd' in
-             (ic, oc)
+             {fd= fd'; ic; oc; cid}
          | TLS fd' ->
              let ic = Lwt_ssl.in_channel_of_descr fd'
-             and oc = Lwt_ssl.out_channel_of_descr fd' in
-             (ic, oc)
+             and oc = Lwt_ssl.out_channel_of_descr fd'
+             and unix_fd = Lwt_ssl.get_fd fd' 
+             in
+             {fd = unix_fd; ic; oc; cid}
        in
        Lwt.finalize
-         (fun () -> protocol (ic,oc,cid))
+         (fun () -> protocol conn)
          (fun () ->
-          Lwt_io.close oc >>= fun () ->
-          Lwt_io.close ic)
+          Lwt_io.close conn.oc >>= fun () ->
+          Lwt_io.close conn.ic)
     )
     (function
       | FOOBAR as foobar->
