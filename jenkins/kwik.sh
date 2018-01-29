@@ -2,4 +2,5 @@
 
 ./jenkins/common.sh
 
-python test_it.py -v --with-xunit --xunit-file=$PWD/testresults.xml ./server/quick
+python test_it.py -v --with-xunit --xunit-file=testresults.xml server/quick
+sudo cp testresults.xml /home/arakoon

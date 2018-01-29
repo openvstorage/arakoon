@@ -13,9 +13,9 @@ then TTY="-t";
 else TTY="";
 fi
 
-docker run -i $TTY --privileged=true -e UID=${UID} \
+docker run -i $TTY --privileged=true \
        --env ARAKOON_PYTHON_CLIENT \
        --env TRAVIS \
-       -v ${PWD}:/home/jenkins/arakoon \
+       -v ${PWD}:/home/arakoon \
        arakoon_$IMAGE \
-       bash $@
+       "$@"

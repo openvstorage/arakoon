@@ -2,22 +2,12 @@
 
 export TEST_HOME='/home/jenkins/arakoon/TESTS'
 
-case "${1-bash}" in
-    bash)
-        bash
-        ;;
-    clean)
-        make clean
-        ;;
-    build)
-        make build
-        ;;
+
+case "${1-undefined}" in
     unit)
         make build
         ./arakoon.native --run-all-tests-xml testresults.xml
-        x=$?
-        cat testresults.xml
-        exit ${x}
+        sudo cp testresults.xml /home/arakoon
         ;;
     kwik)
         ./jenkins/kwik.sh
@@ -31,16 +21,15 @@ case "${1-bash}" in
     d)
         ./jenkins/D.sh
         ;;
+    nose)
+        shift
+        ./jenkins/nose.sh $@
+        ;;
     package_deb)
         ./jenkins/package_deb.sh
         ;;
     package_rpm)
         ./jenkins/package_rpm.sh
-        ;;
-    nose)
-        shift
-        echo "parameters=$@"
-        ./jenkins/nose.sh $@
         ;;
     *)
         echo "invalid test suite specified"
