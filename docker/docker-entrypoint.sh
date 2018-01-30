@@ -9,9 +9,10 @@ sudo tar cf - -C /home arakoon | tar xf -
 cd arakoon
 
 # finally execute the command the user requested
-case $1 in
-  bash)
-	bash
+case ${1-sh} in
+  sh)
+	shift
+	exec sh "$@"
 	;;
   clean)
 	make clean
