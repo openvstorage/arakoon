@@ -6,9 +6,8 @@ rm -rf ${START}/rpmbuild/
 make clean
 mkdir -p ${START}/rpmbuild/SOURCES
 cd ${START}/rpmbuild/SOURCES/
-ln -f -s ${START} ./arakoon
+ln -f -s ${START} arakoon
 cd ${START}
 ls -lR .
-#chown root:root ./redhat/SPECS/arakoon.spec
-#make
-rpmbuild --define "_topdir ${START}/rpmbuild" -bb ./redhat/SPECS/arakoon.spec
+rpmbuild --define "_topdir ${START}/rpmbuild" -bb redhat/SPECS/arakoon.spec
+sudo cp *.rpm /home/arakoon

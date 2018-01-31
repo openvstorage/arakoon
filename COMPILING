@@ -20,7 +20,11 @@ Running the tests
 
 Enter the docker container
 
-./docker/run.sh ubuntu-16.04 bash
+./docker/run.sh ubuntu-16.04 sh
+
+Run command inside the docker container
+
+./docker/run.sh ubuntu-16.04 sh -c <command>
 
 Build packages
 
