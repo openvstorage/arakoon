@@ -20,12 +20,14 @@
               Client_log
               Sn
               Ncfg
+              Joy
               Log_extra Client_cfg
               Stamp
               Arakoon_exc
               Arakoon_client_config
               Arakoon_client
               Arakoon_remote_client
+              Scripting
               Protocol_common
               Client_helper
               Std
@@ -86,12 +88,14 @@
                Client_log
                Sn
                Ncfg
+               Joy
                Log_extra Client_cfg
                Stamp
                Arakoon_exc
                Arakoon_client_config
                Arakoon_client
                Arakoon_remote_client
+               Scripting
                Protocol_common
                Client_helper
                Std

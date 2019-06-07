@@ -388,6 +388,91 @@ let _assert_range (client:client) =
   client # set (prefix ^ "bla2") "" >>= fun () ->
   assert_range [prefix ^ "bla"; prefix ^ "bla2"]
 
+let _script (client:client) =
+  let kvs = [("script1","value_of_script1");
+             ("script1_a", "SCRIPT1_A");
+             ("script1_b", "SCRIPT1_B");
+             ("script1_c", "SCRIPT1_C");
+             ("script1_e", "SCRIPT1_E");
+             ("script1_f", "SCRIPT1_F");
+             ("this_is_the_end", "THIS_IS_THE_END");
+            ]
+  in
+  let seq = let open Arakoon_client in List.map (fun (k,v) -> Set (k,v)) kvs in
+  client # sequence seq >>= fun () ->
+  let open Joy.Language in
+  let tests =
+    [
+      [STRING "script1"; GET_STORE], [STRING "value_of_script1"];                                   (* `get_store`   *)
+      [STRING "I'm not here"; GET_STORE] , [NONE];                                                  (* `get_store` 2 *)
+      [STRING "script_d"; DUP; STRING "PREFIX_D"; PUT_STORE; GET_STORE], [STRING "PREFIX_D"];       (* `put_store`   *)
+      [STRING "script_d"; DUP; NONE; PUT_STORE; GET_STORE], [NONE];                                 (* `put_store` 2 *)
+      [INT 3; INT 4; ADD; INT 6; MUL], [INT 42];                                                    (* integers *)
+
+      [INT 3; INT 2; INT 1; LIST []; CONS; CONS; CONS], [LIST [INT 3; INT 2; INT 1]];               (* lists *)
+      [LIST [INT 1;INT 2;INT 3;INT 4]; INT 0; LIST [ADD]; FOLD], [INT 10];                          (* fold 1 *)
+      [LIST [INT 2;INT 5; INT 3]; INT 0; LIST [ DUP; MUL; ADD]; FOLD], [INT 38];                    (* fold 2 *)
+
+      [LIST [STRING "script1_";BOOL true; STRING "script2_"; BOOL false; ];
+       INT 0;
+       LIST [POP; INT 1; ADD]; FOLD_RANGE],
+      [INT 5];                                                                                      (* fold_range 1: count *)
+
+      [LIST [STRING "script1_";BOOL true; STRING "script2_"; BOOL false; ];
+       LIST [];
+       LIST [SWAP; CONS]; FOLD_RANGE; REVERSE],
+      [LIST [STRING "script1_a";
+             STRING "script1_b";
+             STRING "script1_c";
+             STRING "script1_e";
+             STRING "script1_f";
+            ]
+      ];                                                                                           (* fold_range 2: range *)
+      [ LIST [STRING "script1_";BOOL true; STRING "script2_"; BOOL false; ];
+        LIST [];
+        LIST [SWAP; CONS]; FOLD_RANGE;
+        LIST [];LIST [SWAP; CONS]; FOLD
+      ],
+      [ LIST [STRING "script1_a";
+              STRING "script1_b";
+              STRING "script1_c";
+              STRING "script1_e";
+              STRING "script1_f";]
+      ];                                                                                          (* fold_range 3: range *)
+     
+      [ LIST [STRING "script1_"; BOOL true; STRING "script2_"; BOOL false];
+        LIST [];
+        LIST [DUP;GET_STORE;LIST [];CONS; CONS; SWAP; CONS];
+        FOLD_RANGE;
+        LIST [];LIST [SWAP; CONS]; FOLD;
+      ],
+      [ LIST [LIST [STRING "script1_a"; STRING "SCRIPT1_A"];
+              LIST [STRING "script1_b"; STRING "SCRIPT1_B"];
+              LIST [STRING "script1_c"; STRING "SCRIPT1_C"];
+              LIST [STRING "script1_e"; STRING "SCRIPT1_E"];
+              LIST [STRING "script1_f"; STRING "SCRIPT1_F"];
+      ]];                                                                                        (* fold_range 4: range_entries *)
+
+      [ LIST [INT 1; INT 2; INT 3; INT 4]; SERIALIZE; DESERIALIZE ],
+      [ LIST [INT 1; INT 2; INT 3; INT 4] ];
+      ]
+  in
+  Lwt_list.iter_s
+    (fun (script, expected) ->
+      client # script script >>= fun result ->
+      match result with
+      | Ok stack ->
+         let s2s stack = p_to_string stack in
+         OUnit.assert_equal expected stack ~printer:s2s ~msg:"script does not match expected";
+         Lwt.return_unit
+      | Error(msg,s,p) ->
+         Lwt_io.printlf "error (%s, %s, %s)" msg
+           (p_to_string s)
+           (p_to_string p)
+            >>= fun () -> Lwt.fail_with msg
+    ) tests
+
+
 
 let _range_1 (client: client) =
   let rec fill i =
@@ -638,6 +723,10 @@ let assert_exists3 tpl =
 let assert_range tpl =
   _with_master tpl _assert_range
 
+
+let script tpl =
+  _with_master tpl _script
+  
 let _node_name tn n = Printf.sprintf "%s_%i" tn n
 
 let stop = ref (ref false)
@@ -687,7 +776,8 @@ let make_suite base name w =
       make_el "assert_exists3"   (base + 1300) assert_exists3;
       make_el "trivial_master6"  (base + 1400) trivial_master6;
       make_el "replace"          (base + 1500) replace;
-      make_el "assert_range"    (base + 1600) assert_range;
+      make_el "assert_range"     (base + 1600) assert_range;
+      make_el "script"           (base + 1700) script;
     ]
 
 let force_master =

@@ -129,7 +129,13 @@ class remote_client ((ic,oc) as conn) =
     method nop () = Protocol_common.nop conn
     method get_txid () = Protocol_common.get_txid conn
 
+    method script (s:Joy.Language.program) =
+      let is_update = Joy.Language.is_update s in
+      Protocol_common.script conn is_update s
+
 end: Arakoon_client.client )
+
+
 
 let make_remote_client cluster connection =
   Protocol_common.prologue cluster connection >>= fun () ->

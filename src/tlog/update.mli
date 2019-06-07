@@ -34,6 +34,8 @@ module Update :
       | SyncedSequence of t list
       | DeletePrefix of string
       | Replace of string * string option
+      | Script of string
+
     val make_master_set : string -> float option -> t
 
     val update2s : ?values:bool -> t -> string

@@ -773,7 +773,9 @@ struct
       | Update.AdminSet _
       | Update.DeletePrefix _
       | Update.Replace _
-      | Update.Assert_range _ -> None
+      | Update.Assert_range _
+      | Update.Script _
+        -> None
     in
     let rec _do_one update tx =
       let return () = Lwt.return (Ok None) in
@@ -853,6 +855,13 @@ struct
             S.put store.s tx (__adminprefix ^ k) vo
           in
           Lwt.return (Ok None)
+        | Update.Script s ->
+           begin
+             let user_db = new store_user_db store tx in
+             let r = Scripting.Interpreter.run_update user_db s in
+             Lwt.return (Ok (Some r))
+           end
+
     in
     let with_transaction' f = _with_transaction store kt f in
     let update_in_tx f =

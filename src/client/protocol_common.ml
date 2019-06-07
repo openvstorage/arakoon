@@ -84,6 +84,7 @@ type client_command =
   | COPY_DB_TO_HEAD
   | USER_HOOK
   | LAST_ENTRIES3
+  | SCRIPT
 
 
 let code2int = [
@@ -135,6 +136,7 @@ let code2int = [
   COPY_DB_TO_HEAD         , 0x44l;
   USER_HOOK               , 0x45l;
   LAST_ENTRIES3           , 0x46l;
+  SCRIPT                  , 0x50l;
 ]
 
 let int2code =
@@ -512,4 +514,20 @@ let drop_master (ic, oc) =
   request oc outgoing >>= fun () ->
   response ic nothing
 
+let script (ic,oc) is_update script =
+  let outgoing buf =
+    command_to buf SCRIPT;
+    let buf2 = Buffer.create 128 in
+    let () = Llio.bool_to buf is_update in
+    let () = Joy.Language.p_to buf2 script in
+    Llio.string_to buf (Buffer.contents buf2)
+  in
+  request oc outgoing >>= fun () ->
+  response ic
+    (fun ic ->
+      Llio.input_string ic >>= fun s ->
+      let buf = Llio.make_buffer s 0 in
+      Lwt.return (Joy.Language.result_from buf)
+    )
+  
 exception XException of Arakoon_exc.rc * string

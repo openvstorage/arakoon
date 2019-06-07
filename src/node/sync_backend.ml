@@ -295,6 +295,24 @@ struct
         else
           Lwt.fail (XException(Arakoon_exc.E_BAD_INPUT, Printf.sprintf "User function %S could not be found" name))
 
+      method script script is_update =
+        log_o self "script:%S is_update:%b" script is_update >>= fun () ->
+        if is_update
+        then
+          let update = Update.Script script in
+          let so_post (so: value option) =
+            match so with
+            | None -> failwith "how can this be?"
+            | Some s -> s
+          in
+          _update_rendezvous self update no_stats push_update ~so_post
+        else
+          let () = self # _read_allowed Consistent in
+          let read_user_db = S.get_read_user_db store in
+          let result = Scripting.Interpreter.run_query read_user_db script in
+          Lwt.return result
+
+
       method get_read_user_db () =
         S.get_read_user_db store
 

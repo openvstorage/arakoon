@@ -17,6 +17,7 @@ limitations under the License.
 (** main interface to arakoon *)
 open Statistics
 open Ncfg
+open Joy
 
 type key = string
 type value = string
@@ -36,6 +37,7 @@ type consistency =
   | Consistent
   | No_guarantees
   | At_least of Stamp.t
+
 
 class type client = object
 
@@ -140,6 +142,7 @@ class type client = object
   method user_function: string -> string option -> string option Lwt.t
   method user_hook: ?consistency:consistency -> string -> (Llio.lwtic * Llio.lwtoc) Lwt.t
 
+  method script : Language.program -> (Language.stack, Language.error) result Lwt.t
   method get_key_count: unit -> int64 Lwt.t
 
   method get_cluster_cfgs: unit -> NCFG.t Lwt.t

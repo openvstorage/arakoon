@@ -61,6 +61,7 @@ module Update = struct
     | SyncedSequence of t list
     | DeletePrefix of string
     | Replace of string * string option
+    | Script of string
 
 
   let make_master_set me maybe_lease =
@@ -127,6 +128,8 @@ module Update = struct
       | DeletePrefix prefix    -> Printf.sprintf "DeletePrefix    ;%S" prefix
       | Replace(k,vo) ->
          Printf.sprintf "Replace            ;%S;%i" k (_size_of vo)
+      | Script _s ->
+         Printf.sprintf "Script             ;_ "
     in
     _inner u
 
@@ -198,6 +201,9 @@ module Update = struct
         Llio.int_to b 17;
         Llio.string_to b prefix;
         Range_assertion.to_buffer b assertion
+      | Script s ->
+         Llio.int_to b 18;
+         Llio.string_to b s
 
   let rec from_buffer b =
     let kind = Llio.int_from b in
@@ -273,6 +279,9 @@ module Update = struct
         let prefix = Llio.string_from b in
         let assertion = Range_assertion.from_buffer b in
         Assert_range (prefix, assertion)
+      | 18 ->
+         let s = Llio.string_from b in
+         Script s
       | _ -> failwith (Printf.sprintf "%i:not an update" kind)
 
   let is_synced = function
@@ -292,7 +301,8 @@ module Update = struct
     | AdminSet _
     | DeletePrefix _
     | Replace _
-    | Assert_range _ -> false
+    | Assert_range _ 
+    | Script _ -> false
 
   let rec serialized_size update =
     let () = Logger.ign_debug_f_ "serialize_size %s " (update2s update) in
@@ -319,6 +329,7 @@ module Update = struct
     | Assert_exists k         -> ss k
     | Replace (k,vo)          -> ss k  + sos vo
     | Assert_range (p,a)      -> ss p  + Range_assertion.serialized_size a
+    | Script s                -> ss s
     in
     4 + inner update
 end

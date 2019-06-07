@@ -146,8 +146,10 @@ let decode_sequence ic =
       | Update.UserFunction _
       | Update.AdminSet _
       | Update.DeletePrefix _
-      | Update.Replace _ ->  raise (XException (Arakoon_exc.E_UNKNOWN_FAILURE,
-                                     "should have been a sequence"))
+      | Update.Replace _
+      | Update.Script _
+        ->  raise (XException (Arakoon_exc.E_UNKNOWN_FAILURE,
+                               "should have been a sequence"))
   end
 
 let handle_sequence ~sync ic oc backend =
@@ -719,6 +721,13 @@ let one_command stop (ic,oc,id as conn) (backend:Backend.backend) =
       Llio.output_string oc state >>= fun () ->
       Lwt.return false
     end
+  | SCRIPT ->
+     Llio.input_bool ic >>= fun is_update ->
+     Llio.input_string ic >>= fun script ->
+     backend # script script is_update >>= fun r ->
+     response_ok oc >>= fun () ->
+     Llio.output_string oc r >>= fun () ->
+     Lwt.return false
 
 
 let protocol stop backend connection =

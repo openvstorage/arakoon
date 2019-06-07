@@ -82,6 +82,7 @@ class type backend = object
   method collapse : int -> (int -> unit Lwt.t) -> (unit -> unit Lwt.t) -> unit Lwt.t
 
   method user_function: string -> string option -> (string option) Lwt.t
+  method script : string -> bool -> string Lwt.t
 
   method read_allowed : consistency -> unit
   method get_read_user_db : unit -> Arakoon_registry.read_user_db
